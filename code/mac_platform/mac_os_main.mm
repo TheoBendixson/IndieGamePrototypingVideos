@@ -1,59 +1,15 @@
 #import <AppKit/AppKit.h>
 
-#if 0
-struct window
+@interface
+GameWindowDelegate: NSObject<NSWindowDelegate>
+@end
+
+@implementation GameWindowDelegate
+- (void)windowWillClose:(NSNotification *)notification 
 {
-    // the data...
-    float X, Y;
-    float Width, Height;
-    uint_32 BackgroundColor;
-};
-
-class NSWindow {
-
-    // properties not directly accessible.
-
-    // there is a struct in here!
-    struct window
-    {
-        // the data...
-        float X, Y;
-        float Width, Height;
-        uint_32 BackgroundColor;
-    };
-
-    // Initializers
-    
-
-    // Constructors
-    // Destructors
-
-    @property float Width;
-
-    // Getters and Setters (A.K.A. "accessors")
-    - (float) GetWidth {
-        return _Width;
-    }
-
-
-    // Because you don't have direct access to the data!!
-
-    /*
-    real32 X, Y;
-    real32 Width, Height;
-    uint32 BackgroundColor;*/
+    [NSApp terminate: nil];
 }
-
-struct window
-{
-    NSRect WindowRect;
-    styleMask;
-    backingStoreType;
-    deferFlag;
-    NSColor BackgroundColor;
-    NSString Title;
-}
-#endif
+@end
 
 int main(int argc, const char * argv[]) 
 {
@@ -66,6 +22,9 @@ int main(int argc, const char * argv[])
                                                                NSWindowStyleMaskClosable)
                                                      backing: NSBackingStoreBuffered 
                                                        defer: NO];
+
+    GameWindowDelegate *WindowDelegate = [[GameWindowDelegate alloc] init];
+    [Window setDelegate: WindowDelegate];
 
     [Window setBackgroundColor: [NSColor redColor]];
     [Window setTitle: @"Mooselutions"];
