@@ -9,8 +9,13 @@ pushd ../../build/mac_os/
 # This is the mac platform layer path from inside of the build directory for mac.
 MAC_PLATFORM_LAYER_PATH=../../code/mac_platform
 
+MAC_FRAMEWORKS="-framework AppKit 
+                -framework MetalKit 
+                -framework Metal"
+
 # clang will be invoked from inside of the build directory
-clang -g -framework AppKit -o $APP_NAME ${MAC_PLATFORM_LAYER_PATH}/mac_os_main.mm
+clang -g $MAC_FRAMEWORKS -o $APP_NAME ${MAC_PLATFORM_LAYER_PATH}/mac_os_main.mm
+              
 
 
 rm -rf $APP_BUNDLE_NAME

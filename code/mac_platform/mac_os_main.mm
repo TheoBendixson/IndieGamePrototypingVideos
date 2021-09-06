@@ -1,4 +1,5 @@
 #import <AppKit/AppKit.h>
+#import <MetalKit/MetalKit.h>
 
 @interface
 GameWindowDelegate: NSObject<NSWindowDelegate>
@@ -30,6 +31,38 @@ int main(int argc, const char * argv[])
     [Window setTitle: @"Mooselutions"];
     [Window makeKeyAndOrderFront: nil];
 
+    id<MTLDevice> MetalDevice = MTLCreateSystemDefaultDevice();
+
+    MTKView *MetalKitView = [[MTKView alloc] initWithFrame: WindowRectangle
+                                                    device: MetalDevice];
+    Window.contentView = MetalKitView;
+
+
+
     return NSApplicationMain(argc, argv);
 }
 
+// View class hierarchy
+// NSView (all views inherit from this)
+//  |
+// MTKView (subclass)
+
+// Views / View Hierarchy
+// Hierarchical
+
+// Root View --> A list of instructions for the GPU
+//   |
+//   Child View
+//  |      |
+//  CV    CV
+
+// Two types of space of GPU
+// 1. Vertex buffers
+// 2. Texture memory
+
+// Stuff that needs to get drawn
+
+//  View can contain other views
+
+// Windows 
+// NSView
