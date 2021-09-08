@@ -14,7 +14,7 @@ MAC_FRAMEWORKS="-framework AppKit
                 -framework Metal"
 
 # clang will be invoked from inside of the build directory
-clang -g $MAC_FRAMEWORKS -o $APP_NAME ${MAC_PLATFORM_LAYER_PATH}/mac_os_main.mm
+clang -g $MAC_FRAMEWORKS -lstdc++ -o $APP_NAME ${MAC_PLATFORM_LAYER_PATH}/mac_os_main.mm
               
 
 

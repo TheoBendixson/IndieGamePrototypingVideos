@@ -1,5 +1,8 @@
 #import <AppKit/AppKit.h>
+#import <Metal/Metal.h>
 #import <MetalKit/MetalKit.h>
+#include <mach/mach_init.h>
+#include <mach/mach_time.h>
 
 @interface
 GameWindowDelegate: NSObject<NSWindowDelegate>
@@ -10,6 +13,80 @@ GameWindowDelegate: NSObject<NSWindowDelegate>
 {
     [NSApp terminate: nil];
 }
+@end
+
+@interface
+MetalKitViewDelegate: NSObject<MTKViewDelegate>
+@property (retain) id<MTLCommandQueue> CommandQueue;
+@end
+
+static const NSUInteger kMaxInflightBuffers = 3;
+
+@implementation MetalKitViewDelegate
+{
+    dispatch_semaphore_t _frameBoundarySemaphore;
+    NSUInteger _currentFrameIndex;
+}
+
+// Vertex buffers for game object geometry
+
+// What if you only had one vertex buffer?
+
+// One buffer? Two buffers?
+
+// Triple Buffering..
+
+// NOTE: (Ted)   This is the game's render loop
+- (void)configureMetal
+{
+    _frameBoundarySemaphore = dispatch_semaphore_create(kMaxInflightBuffers);
+    _currentFrameIndex = 0;
+}
+
+// Vertical sync
+
+// IMPORTANT: (Ted) This needs to be really really fast!!!
+- (void)drawInMTKView:(MTKView *)view
+{
+    dispatch_semaphore_wait(_frameBoundarySemaphore, DISPATCH_TIME_FOREVER);
+
+    MTLViewport Viewport = { 0, 0, 1024.0f, 1024.0f };
+
+    @autoreleasepool 
+    {
+        id<MTLCommandBuffer> CommandBuffer = [[self CommandQueue] commandBuffer];
+
+        MTLRenderPassDescriptor *RenderPassDescriptor = [view currentRenderPassDescriptor];
+        RenderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
+
+        MTLClearColor MetalClearColor = MTLClearColorMake(0.0f, 1.0f, 0.0f, 1.0f);
+        RenderPassDescriptor.colorAttachments[0].clearColor = MetalClearColor;
+
+        // MTLRenderCommandEncoder
+        id<MTLRenderCommandEncoder> RenderEncoder = [CommandBuffer renderCommandEncoderWithDescriptor: RenderPassDescriptor];
+
+        [RenderEncoder setViewport: Viewport];
+        [RenderEncoder endEncoding];
+
+        // Schedule a present once the framebuffer is complete using the current drawable
+        id<CAMetalDrawable> NextDrawable = [view currentDrawable];
+        [CommandBuffer presentDrawable: NextDrawable];
+
+        __block dispatch_semaphore_t semaphore = _frameBoundarySemaphore;
+
+        [CommandBuffer addCompletedHandler:^(id<MTLCommandBuffer> commandBuffer) {
+            dispatch_semaphore_signal(semaphore);
+        }];
+
+        [CommandBuffer commit];
+    }
+}
+
+- (void)mtkView:(MTKView *)view drawableSizeWillChange:(CGSize)size
+{
+
+}
+
 @end
 
 int main(int argc, const char * argv[]) 
@@ -32,37 +109,19 @@ int main(int argc, const char * argv[])
     [Window makeKeyAndOrderFront: nil];
 
     id<MTLDevice> MetalDevice = MTLCreateSystemDefaultDevice();
+    id<MTLCommandQueue> CommandQueue = [MetalDevice newCommandQueue];
 
     MTKView *MetalKitView = [[MTKView alloc] initWithFrame: WindowRectangle
                                                     device: MetalDevice];
     Window.contentView = MetalKitView;
 
+    MetalKitViewDelegate *ViewDelegate = [[MetalKitViewDelegate alloc] init];
+    [MetalKitView setDelegate: ViewDelegate];
 
+    [ViewDelegate setCommandQueue: CommandQueue];
+    [ViewDelegate configureMetal];
 
     return NSApplicationMain(argc, argv);
 }
 
-// View class hierarchy
-// NSView (all views inherit from this)
-//  |
-// MTKView (subclass)
-
-// Views / View Hierarchy
-// Hierarchical
-
-// Root View --> A list of instructions for the GPU
-//   |
-//   Child View
-//  |      |
-//  CV    CV
-
-// Two types of space of GPU
-// 1. Vertex buffers
-// 2. Texture memory
-
-// Stuff that needs to get drawn
-
-//  View can contain other views
-
-// Windows 
-// NSView
+// Delegate object?
