@@ -111,6 +111,35 @@ int main(int argc, const char * argv[])
     id<MTLDevice> MetalDevice = MTLCreateSystemDefaultDevice();
     id<MTLCommandQueue> CommandQueue = [MetalDevice newCommandQueue];
 
+    // Setup the Metal Library with vertex shader and fragment shaders....
+    NSError *Error = NULL;
+
+    NSString *ShaderLibraryFilepath = [[NSBundle mainBundle] pathForResource: @"Shaders" ofType: @"metallib"];
+    id<MTLLibrary> ShaderLibrary = [MetalDevice newLibraryWithFile: ShaderLibraryFilepath 
+                                                             error: &Error];
+    id<MTLFunction> VertexShader = [ShaderLibrary newFunctionWithName: @"vertexShader"];
+    id<MTLFunction> FragmentShader = [ShaderLibrary newFunctionWithName: @"fragmentShader"];
+
+    if (Error != NULL)
+    {
+        [NSException raise: @"Can't Setup Metal" 
+                    format: @"Unable to shader libraries"];
+    }
+
+    // Setup Render Pipeline States
+    MTLRenderPipelineDescriptor *SolidColorPipelineDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
+    [SolidColorPipelineDescriptor setVertexFunction: VertexShader];
+    [SolidColorPipelineDescriptor setFragmentFunction: FragmentShader];
+
+    id<MTLRenderPipelineState> SolidColorPipelineState = [MetalDevice newRenderPipelineStateWithDescriptor: SolidColorPipelineDescriptor 
+                                                                                                     error: &Error];
+
+    if (Error != NULL)
+    {
+        [NSException raise: @"Can't Setup Metal" 
+                    format: @"Unable to setup rendering pipeline state"];
+    }
+
     MTKView *MetalKitView = [[MTKView alloc] initWithFrame: WindowRectangle
                                                     device: MetalDevice];
     Window.contentView = MetalKitView;
