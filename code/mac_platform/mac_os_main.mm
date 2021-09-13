@@ -4,6 +4,23 @@
 #include <mach/mach_init.h>
 #include <mach/mach_time.h>
 
+
+#include "../game_library/base_types.h"
+#include <simd/simd.h>
+#include "../game_library/game_renderer.h"
+
+struct game_vertex_buffer
+{
+    game_vertex *Vertices;
+    u32 DrawCount;
+};
+
+struct game_render_commands
+{
+    u32 CurrentFrameIndex;
+    game_vertex_buffer VertexBuffers[3];
+};
+
 @interface
 GameWindowDelegate: NSObject<NSWindowDelegate>
 @end
@@ -18,6 +35,9 @@ GameWindowDelegate: NSObject<NSWindowDelegate>
 @interface
 MetalKitViewDelegate: NSObject<MTKViewDelegate>
 @property (retain) id<MTLCommandQueue> CommandQueue;
+@property (retain) NSMutableArray *MacVertexBuffers;
+@property game_render_commands RenderCommands;
+@property (retain) id<MTLRenderPipelineState> SolidColorPipelineState;
 @end
 
 static const NSUInteger kMaxInflightBuffers = 3;
@@ -52,6 +72,19 @@ static const NSUInteger kMaxInflightBuffers = 3;
 
     MTLViewport Viewport = { 0, 0, 1024.0f, 1024.0f };
 
+    u32 FrameIndex = _currentFrameIndex;
+
+    game_vertex *Vertices = _RenderCommands.VertexBuffers[FrameIndex].Vertices;
+    
+    game_vertex V1 = { { -1.0f, 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } };
+    Vertices[0] = V1;
+
+    game_vertex V2 = { { 1.0f, 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } };
+    Vertices[1] = V2;
+
+    game_vertex V3 = { { 0.0f, -1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } };
+    Vertices[2] = V3;
+
     @autoreleasepool 
     {
         id<MTLCommandBuffer> CommandBuffer = [[self CommandQueue] commandBuffer];
@@ -64,13 +97,34 @@ static const NSUInteger kMaxInflightBuffers = 3;
 
         // MTLRenderCommandEncoder
         id<MTLRenderCommandEncoder> RenderEncoder = [CommandBuffer renderCommandEncoderWithDescriptor: RenderPassDescriptor];
-
         [RenderEncoder setViewport: Viewport];
+        [RenderEncoder setRenderPipelineState: [self SolidColorPipelineState]];
+
+        // NOTE: (Ted)  Preparing to render
+        id<MTLBuffer> MacVertexBuffer = [[self MacVertexBuffers] objectAtIndex: _currentFrameIndex];
+
+        [RenderEncoder setVertexBuffer: MacVertexBuffer  
+                                offset: 0 
+                               atIndex: 0];
+
+        [RenderEncoder drawPrimitives: MTLPrimitiveTypeTriangle
+                          vertexStart: 0 
+                          vertexCount: 3];
+
         [RenderEncoder endEncoding];
 
         // Schedule a present once the framebuffer is complete using the current drawable
         id<CAMetalDrawable> NextDrawable = [view currentDrawable];
         [CommandBuffer presentDrawable: NextDrawable];
+
+        u32 NextIndex = _currentFrameIndex + 1;
+
+        if (NextIndex > 2)
+        {
+            NextIndex = 0;
+        }
+
+        _currentFrameIndex = NextIndex;
 
         __block dispatch_semaphore_t semaphore = _frameBoundarySemaphore;
 
@@ -111,6 +165,10 @@ int main(int argc, const char * argv[])
     id<MTLDevice> MetalDevice = MTLCreateSystemDefaultDevice();
     id<MTLCommandQueue> CommandQueue = [MetalDevice newCommandQueue];
 
+    MTKView *MetalKitView = [[MTKView alloc] initWithFrame: WindowRectangle
+                                                    device: MetalDevice];
+    Window.contentView = MetalKitView;
+
     // Setup the Metal Library with vertex shader and fragment shaders....
     NSError *Error = NULL;
 
@@ -130,6 +188,7 @@ int main(int argc, const char * argv[])
     MTLRenderPipelineDescriptor *SolidColorPipelineDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
     [SolidColorPipelineDescriptor setVertexFunction: VertexShader];
     [SolidColorPipelineDescriptor setFragmentFunction: FragmentShader];
+    SolidColorPipelineDescriptor.colorAttachments[0].pixelFormat = MetalKitView.colorPixelFormat;
 
     id<MTLRenderPipelineState> SolidColorPipelineState = [MetalDevice newRenderPipelineStateWithDescriptor: SolidColorPipelineDescriptor 
                                                                                                      error: &Error];
@@ -140,13 +199,36 @@ int main(int argc, const char * argv[])
                     format: @"Unable to setup rendering pipeline state"];
     }
 
-    MTKView *MetalKitView = [[MTKView alloc] initWithFrame: WindowRectangle
-                                                    device: MetalDevice];
-    Window.contentView = MetalKitView;
+
+    u32 PageSize = getpagesize();
+    u32 VertexBufferSize = PageSize*1000;
+
+    game_render_commands RenderCommands = {};
+
+    NSMutableArray *MacVertexBuffers = [[NSMutableArray alloc] init];
+
+    for (u32 FrameIndex = 0;
+         FrameIndex < 3;
+         FrameIndex++)
+     {
+        game_vertex_buffer GameVertexBuffer = {};
+        GameVertexBuffer.Vertices = (game_vertex *)mmap(0, VertexBufferSize, PROT_READ | PROT_WRITE,
+                                                        MAP_PRIVATE | MAP_ANON, -1, 0);
+        RenderCommands.VertexBuffers[FrameIndex] = GameVertexBuffer;
+
+        id<MTLBuffer> MetalVertexBuffer = [MetalDevice newBufferWithBytesNoCopy: GameVertexBuffer.Vertices
+                                                                         length: VertexBufferSize 
+                                                                        options: MTLResourceStorageModeShared
+                                                                    deallocator: nil];
+        [MacVertexBuffers addObject: MetalVertexBuffer];
+     }
 
     MetalKitViewDelegate *ViewDelegate = [[MetalKitViewDelegate alloc] init];
     [MetalKitView setDelegate: ViewDelegate];
 
+    [ViewDelegate setMacVertexBuffers: MacVertexBuffers];
+    [ViewDelegate setRenderCommands: RenderCommands];
+    [ViewDelegate setSolidColorPipelineState: SolidColorPipelineState];
     [ViewDelegate setCommandQueue: CommandQueue];
     [ViewDelegate configureMetal];
 

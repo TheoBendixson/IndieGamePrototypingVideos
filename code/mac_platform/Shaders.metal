@@ -16,8 +16,7 @@ typedef struct
 
 } RasterizerData;
 
-// NOTE: (Ted)  Move this to the cross-platform game library.
-struct game_vertex
+struct metal_game_vertex
 {
     float4 position;
     float4 color;
@@ -26,7 +25,7 @@ struct game_vertex
 // Vertex Function
 vertex RasterizerData
 vertexShader(uint vertexID [[ vertex_id ]],
-             constant game_vertex *vertexArray [[ buffer(0) ]])
+             constant metal_game_vertex *vertexArray [[ buffer(0) ]])
 {
 
     RasterizerData out;
