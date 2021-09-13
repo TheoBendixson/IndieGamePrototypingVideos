@@ -70,7 +70,7 @@ static const NSUInteger kMaxInflightBuffers = 3;
 {
     dispatch_semaphore_wait(_frameBoundarySemaphore, DISPATCH_TIME_FOREVER);
 
-    MTLViewport Viewport = { 0, 0, 1024.0f, 1024.0f };
+    MTLViewport Viewport = { 0, 0, 2048.0f, 2048.0f };
 
     u32 FrameIndex = _currentFrameIndex;
 
