@@ -70,19 +70,21 @@ static const NSUInteger kMaxInflightBuffers = 3;
 {
     dispatch_semaphore_wait(_frameBoundarySemaphore, DISPATCH_TIME_FOREVER);
 
+    // NOTE: (Ted)  On retina screens, the MTLViewport is twice the size of the
+    //              window's draw area.
     MTLViewport Viewport = { 0, 0, 2048.0f, 2048.0f };
 
     u32 FrameIndex = _currentFrameIndex;
 
     game_vertex *Vertices = _RenderCommands.VertexBuffers[FrameIndex].Vertices;
     
-    game_vertex V1 = { { -1.0f, 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } };
+    game_vertex V1 = { { -1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } };
     Vertices[0] = V1;
 
-    game_vertex V2 = { { 1.0f, 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } };
+    game_vertex V2 = { { 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } };
     Vertices[1] = V2;
 
-    game_vertex V3 = { { 0.0f, -1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } };
+    game_vertex V3 = { { 0.0f, -1.0f }, { 0.5f, 0.5f, 0.5f, 1.0f } };
     Vertices[2] = V3;
 
     @autoreleasepool 
