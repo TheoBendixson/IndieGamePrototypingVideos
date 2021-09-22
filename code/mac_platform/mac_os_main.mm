@@ -21,6 +21,32 @@ struct game_render_commands
     game_vertex_buffer VertexBuffers[3];
 };
 
+// NOTE: (Ted)  This assumes Vertices is a six vertex buffer of some sort.
+void DrawRectangle(game_vertex *Vertices, u32 *VertexCount, vector_float4 Color,
+                   r32 MinX, r32 MinY, r32 MaxX, r32 MaxY)
+{
+    u32 BaseVertex = *VertexCount;
+    game_vertex V1 = { { MinX, MinY }, Color };
+    Vertices[BaseVertex++] = V1;
+
+    game_vertex V2 = { { MaxX, MinY }, Color };
+    Vertices[BaseVertex++] = V2;
+
+    game_vertex V3 = { { MaxX, MaxY }, Color };
+    Vertices[BaseVertex++] = V3;
+
+    game_vertex V4 = { { MinX, MinY }, Color };
+    Vertices[BaseVertex++] = V4;
+
+    game_vertex V5 = { { MinX, MaxY }, Color };
+    Vertices[BaseVertex++] = V5;
+
+    game_vertex V6 = { { MaxX, MaxY }, Color };
+    Vertices[BaseVertex++] = V6;
+
+    *VertexCount += 6;
+}
+
 @interface
 GameWindowDelegate: NSObject<NSWindowDelegate>
 @end
@@ -77,15 +103,35 @@ static const NSUInteger kMaxInflightBuffers = 3;
     u32 FrameIndex = _currentFrameIndex;
 
     game_vertex *Vertices = _RenderCommands.VertexBuffers[FrameIndex].Vertices;
-    
-    game_vertex V1 = { { -1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } };
-    Vertices[0] = V1;
+   
+    // NOTE: Square is 24x24 px square
+    //
+    //          XMax is 524
+    //          XMin is 486
+    //
+    //          also applies to Y axis.
 
-    game_vertex V2 = { { 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } };
-    Vertices[1] = V2;
+    //  What does the bottom triangle look like?
+    //
+    //    (Min,Max) (Max, Max)
+    //          |-----/
+    //          |    /|
+    //          |   / |
+    //          |  /  |
+    //          | /   |
+    //          |/    |
+    //          /     |
+    //  (Min, Min)-(Max, Min)
+   
+    u32 VertexCount = 0;
 
-    game_vertex V3 = { { 0.0f, -1.0f }, { 0.5f, 0.5f, 0.5f, 1.0f } };
-    Vertices[2] = V3;
+    vector_float4 Blue = { 0.0f, 0.0f, 1.0f, 1.0f };
+    DrawRectangle(Vertices, &VertexCount, Blue,
+                  0.0f, 0.0f, 128.0f, 128.0f);
+
+    vector_float4 Red = { 1.0f, 0.0f, 0.0f, 1.0f };
+    DrawRectangle(Vertices, &VertexCount, Red,
+                  128.0f, 128.0f, 256.0f, 256.0f);
 
     @autoreleasepool 
     {
@@ -111,7 +157,7 @@ static const NSUInteger kMaxInflightBuffers = 3;
 
         [RenderEncoder drawPrimitives: MTLPrimitiveTypeTriangle
                           vertexStart: 0 
-                          vertexCount: 3];
+                          vertexCount: VertexCount];
 
         [RenderEncoder endEncoding];
 
