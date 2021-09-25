@@ -21,31 +21,40 @@ struct game_render_commands
     game_vertex_buffer VertexBuffers[3];
 };
 
+struct v2
+{
+    r32 Min;
+    r32 Max;
+};
+
 // NOTE: (Ted)  This assumes Vertices is a six vertex buffer of some sort.
 void DrawRectangle(game_vertex *Vertices, u32 *VertexCount, vector_float4 Color,
-                   r32 MinX, r32 MinY, r32 MaxX, r32 MaxY)
+                   v2 X, v2 Y)
 {
     u32 BaseVertex = *VertexCount;
-    game_vertex V1 = { { MinX, MinY }, Color };
+    game_vertex V1 = { { X.Min, Y.Min }, Color };
     Vertices[BaseVertex++] = V1;
 
-    game_vertex V2 = { { MaxX, MinY }, Color };
+    game_vertex V2 = { { X.Max, Y.Min }, Color };
     Vertices[BaseVertex++] = V2;
 
-    game_vertex V3 = { { MaxX, MaxY }, Color };
+    game_vertex V3 = { { X.Max, Y.Max }, Color };
     Vertices[BaseVertex++] = V3;
 
-    game_vertex V4 = { { MinX, MinY }, Color };
+    game_vertex V4 = { { X.Min, Y.Min }, Color };
     Vertices[BaseVertex++] = V4;
 
-    game_vertex V5 = { { MinX, MaxY }, Color };
+    game_vertex V5 = { { X.Min, Y.Max }, Color };
     Vertices[BaseVertex++] = V5;
 
-    game_vertex V6 = { { MaxX, MaxY }, Color };
+    game_vertex V6 = { { X.Max, Y.Max }, Color };
     Vertices[BaseVertex++] = V6;
 
     *VertexCount += 6;
 }
+
+static r32 PlayerXCoordinate = 200.0f;
+static r32 PlayerYCoordinate = 200.0f;
 
 @interface
 GameWindowDelegate: NSObject<NSWindowDelegate>
@@ -126,12 +135,32 @@ static const NSUInteger kMaxInflightBuffers = 3;
     u32 VertexCount = 0;
 
     vector_float4 Blue = { 0.0f, 0.0f, 1.0f, 1.0f };
-    DrawRectangle(Vertices, &VertexCount, Blue,
-                  0.0f, 0.0f, 128.0f, 128.0f);
 
-    vector_float4 Red = { 1.0f, 0.0f, 0.0f, 1.0f };
-    DrawRectangle(Vertices, &VertexCount, Red,
-                  128.0f, 128.0f, 256.0f, 256.0f);
+    r32 PlayerWidth = 24.0f;
+    r32 PlayerHeight = 24.0f;
+
+    PlayerXCoordinate += 0.1f;
+    PlayerYCoordinate += 0.1f;
+
+    if (PlayerXCoordinate > 1024.0f)
+    {
+        PlayerXCoordinate = 0.0f;
+    }
+
+    if (PlayerYCoordinate > 1024.0f)
+    {
+        PlayerYCoordinate = 0.0f;
+    }
+
+    v2 X = {}; 
+    X.Min = PlayerXCoordinate - 0.5f*PlayerWidth;
+    X.Max = PlayerXCoordinate + 0.5f*PlayerWidth;
+    
+    v2 Y = {}; 
+    Y.Min = PlayerYCoordinate - 0.5f*PlayerHeight;
+    Y.Max = PlayerYCoordinate + 0.5f*PlayerHeight;
+
+    DrawRectangle(Vertices, &VertexCount, Blue, X, Y);
 
     @autoreleasepool 
     {
