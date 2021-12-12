@@ -3,6 +3,9 @@ echo "Building Mooselutions"
 APP_NAME="Mooselutions"
 APP_BUNDLE_NAME="Mooselutions.app"
 
+# Make build directory if doesn't exist
+mkdir -p ../../build/mac_os/
+
 # pushd moves us into a directory where we will exectue commands
 pushd ../../build/mac_os/
 
